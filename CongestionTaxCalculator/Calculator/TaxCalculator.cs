@@ -18,27 +18,35 @@ namespace CongestionTaxCalculator.Calculator
 
         public int GetTax(string vehicle, DateTime[] dates)
         {
+            Array.Sort(dates);
+
             DateTime intervalStart = dates[0];
-            int totalFee = 0;
+            int intervalGreatestFee = taxRule.GetTollFee(intervalStart, vehicle);
+            int totalFee = intervalGreatestFee;
+
             foreach (DateTime date in dates)
             {
                 int nextFee = taxRule.GetTollFee(date, vehicle);
-                int tempFee = taxRule.GetTollFee(intervalStart, vehicle);
 
-                long diffInMillies = date.Millisecond - intervalStart.Millisecond;
-                long minutes = diffInMillies / 1000 / 60;
+                double minutes = (date - intervalStart).TotalMinutes;
 
                 if (minutes <= 60)
                 {
-                    if (totalFee > 0) totalFee -= tempFee;
-                    if (nextFee >= tempFee) tempFee = nextFee;
-                    totalFee += tempFee;
+                    if (nextFee > intervalGreatestFee)
+                    {
+                        totalFee = totalFee - intervalGreatestFee + nextFee;
+                        intervalGreatestFee = nextFee;
+                    }
                 }
                 else
                 {
-                    totalFee += nextFee;
+                    totalFee = totalFee + nextFee;
+
+                    intervalStart = date;
+                    intervalGreatestFee = nextFee;
                 }
             }
+
             if (totalFee > 60) totalFee = 60;
             return totalFee;
         }
