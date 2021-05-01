@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace CongestionTaxCalculator.Calculator
 {
     public interface ITaxCalculator
     {
-        int GetTax(string vehicle, DateTime[] dates);
+        int GetTax(string vehicle, List<DateTime> dates);
     }
 
     public class TaxCalculator: ITaxCalculator
@@ -16,39 +18,49 @@ namespace CongestionTaxCalculator.Calculator
             taxRule = _taxRule;
         }
 
-        public int GetTax(string vehicle, DateTime[] dates)
+        public int GetTax(string vehicle, List<DateTime> dates)
         {
-            Array.Sort(dates);
+            var datesDictionary = dates.GroupBy(g=>g.Date).ToDictionary(k=>k.Key,v=> v.ToList());
+            int grandTotal = 0;
 
-            DateTime intervalStart = dates[0];
-            int intervalGreatestFee = taxRule.GetTollFee(intervalStart, vehicle);
-            int totalFee = intervalGreatestFee;
-
-            foreach (DateTime date in dates)
+            foreach(var day in datesDictionary)
             {
-                int nextFee = taxRule.GetTollFee(date, vehicle);
+                List<DateTime> tollCrossingTimestamps = day.Value;
+                tollCrossingTimestamps.Sort();
 
-                double minutes = (date - intervalStart).TotalMinutes;
+                DateTime initialTollCrossing = tollCrossingTimestamps[0];
+                int initialTollFee = taxRule.GetTollFee(initialTollCrossing, vehicle);
+                int totalFeeOfTheDay = initialTollFee;
 
-                if (minutes <= 60)
+                foreach (DateTime tollCrossingTimestamp in tollCrossingTimestamps)
                 {
-                    if (nextFee > intervalGreatestFee)
+                    int currentTollFee = taxRule.GetTollFee(tollCrossingTimestamp, vehicle);
+
+                    double minutesSinceLastTollCrossing = (tollCrossingTimestamp - initialTollCrossing).TotalMinutes;
+
+                    if (minutesSinceLastTollCrossing <= 60)
                     {
-                        totalFee = totalFee - intervalGreatestFee + nextFee;
-                        intervalGreatestFee = nextFee;
+                        if (currentTollFee > initialTollFee)
+                        {
+                            totalFeeOfTheDay = totalFeeOfTheDay - initialTollFee + currentTollFee;
+                            initialTollFee = currentTollFee;
+                        }
+                    }
+                    else
+                    {
+                        totalFeeOfTheDay = totalFeeOfTheDay + currentTollFee;
+                        initialTollCrossing = tollCrossingTimestamp;
+                        initialTollFee = currentTollFee;
                     }
                 }
-                else
-                {
-                    totalFee = totalFee + nextFee;
 
-                    intervalStart = date;
-                    intervalGreatestFee = nextFee;
-                }
+                if (totalFeeOfTheDay > 60) // per day per vehicle max fee is 60 SEK
+                    totalFeeOfTheDay = 60;
+
+                grandTotal = grandTotal + totalFeeOfTheDay;
             }
 
-            if (totalFee > 60) totalFee = 60;
-            return totalFee;
+            return grandTotal;
         }
     }
 }

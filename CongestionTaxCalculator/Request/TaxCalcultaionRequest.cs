@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace CongestionTaxCalculator.Request
 {
     public class TaxCalcultaionRequest
     {
         public string VehicleType { get; set; }
-        public DateTime[] Dates {get;set;}
+        public List<DateTime> Dates {get;set;}
     }
 }

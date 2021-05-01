@@ -18,13 +18,13 @@ namespace CongestionTaxCalculator.Controllers
         [Route("calculate")]
         public IActionResult GetTax(TaxCalcultaionRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.VehicleType) || request.Dates == null || request.Dates.Length == 0)
+            if (string.IsNullOrWhiteSpace(request.VehicleType))
                 return BadRequest("Vehicle is a required field.");
 
             if (request.Dates == null)
                 return BadRequest("Dates is a required field.");
 
-            if (request.Dates.Length == 0)
+            if (request.Dates.Count == 0)
                 return BadRequest("Dates can not be empty.");
 
             return Ok(taxCalculator.GetTax(request.VehicleType,request.Dates));
